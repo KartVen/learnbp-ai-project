@@ -1,6 +1,6 @@
 # AI Project with BackPropagation - learnbp
-Simple Neural Network with use dataset:
-- [Breat Tissue - archive.ics.uci.edu.pl](https://archive.ics.uci.edu/ml/datasets/Breast+Tissue)
+Simple Neural Network with use backpropagation algorithm and dataset:
+- [Breat Tissue - archive.ics.uci.edu](https://archive.ics.uci.edu/ml/datasets/Breast+Tissue)
 
 ## How to try it?
 
