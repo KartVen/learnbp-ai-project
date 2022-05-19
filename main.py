@@ -1,12 +1,15 @@
 from csv import reader
-from numpy import array, transpose
+from numpy import array
 from time import time
 from tabulate import tabulate
 
+from network import Network
+
 start_time = time()
 
+
 def main():
-    data = importData('./BreastTissue.csv')
+    data = importData('./BreastTissueLight.csv')
     data = array(data)
 
     # Change to array and convert str to float
@@ -16,10 +19,17 @@ def main():
     # T = [row[0] for row in data]
     # P = [[row[col] for col in range(1, data_cols)] for row in data]
     T, P = data[:, 0], data[:, 1:]
-    T_prim, P_prim = transpose(T), transpose(P)
 
-    P_prim_norm = normalizeMinMax(P_prim, -1, 1)
-    print(tabulate(P_prim_norm[:, 0:15]))
+    P_norm = normalizeMinMax(P.T, -1, 1).T
+    # print(tabulate(P_norm[:, 0:15]))
+
+    layer_size = [len(P[0]), 12, 1]
+
+    data_norm = [(P_norm[i], [T[i]]) for i in range(0, len(T))]
+    # print(tabulate(data_norm))
+
+    network = Network(layer_size[0], layer_size[1], layer_size[2])
+    network.train(data_norm, 1, 0.01)
 
 
 # Read data from file
