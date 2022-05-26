@@ -1,64 +1,76 @@
 from csv import reader
-from numpy import array, random
+from numpy import array
 from time import time
 from tabulate import tabulate
 from random import seed
-import sys
+from sys import argv
+from sklearn.model_selection import train_test_split
 
 from network import Network
 
 start_time = time()
 
 
-def main(*args: any):
+def main(*args):
     args = array(args[0]).astype(float)
+    seed(1)
 
-    data = import_data('./BreastTissue.csv')
-    data = array(data, dtype=object)
+    train_data, test_data = import_and_form_data("BreastTissue.csv", ';')
 
-    # Change to array and convert str to float
-    # data = [[float(col) for col in row] for row in data]
+    layer_sizes = [9, int(args[0]), 6] if len(args) == 3 else [9, 30, 6]
+    epochs = int(args[1]) if len(args) == 3 else 100000
+    eta = args[2] if len(args) == 3 else 0.01
+
+    network_bp = Network(layer_sizes)
+    network_bp.train(train_data, epochs, eta, test_data=test_data)
+
+
+def import_data(name, delimiter):
+    with open(name, 'r') as file:
+        return [line for line in reader(file, delimiter=delimiter)]
+
+
+def import_and_form_data(name, delimiter):
+    data = array(import_data(name, delimiter))
     data = data.astype(float)
 
-    # T = [row[0] for row in data]
-    # P = [[row[col] for col in range(1, data_cols)] for row in data]
-    T, P = data[:, :1], data[:, 1:]
+    data = normalize_min_max(data.T, 0, 1).T
 
-    P_norm = normalize_min_max(P.T, 0, 1).T
-    T_norm = normalize_min_max(T.T, 0, 1).T
-    # print(tabulate(P_norm[:, 0:15]))
+    train_data, test_data = train_test_split(data, test_size=0.25, random_state=25)
 
-    layer_size = [len(P[0]), int(0.3 * len(data)), 1]
+    P, T = train_data[:, 1:], train_data[:, :1]
+    P_test, T_test = test_data[:, 1:], test_data[:, :1]
+    T_vector = create_vector_target(T * 5, 6)
+    T_test *= 5
 
-    data_norm = array([(P_norm[i], T[i]) for i in range(0, len(T))], dtype=object)
+    train_data = [(array([P[i]]).T, array([T_vector[i]]).T) for i in range(0, len(T))]
+    test_data = [(array([P_test[i]]).T, array([T_test[i]]).T) for i in range(0, len(T_test))]
 
-    spliter = random.rand(len(data_norm)) <= 0.17
-    train_data, test_data = data_norm[~spliter], data_norm[spliter]
-
-    seed(1)
-    network = Network(layer_size[0], layer_size[1], layer_size[2])
-    network.train(data_norm, int(args[0]), args[1], test_data)  # epochs: 20000 eta:0.01
-    network.predict(data_norm)
+    return train_data, test_data
 
 
-# Read data from file
-def import_data(name: str):
-    with open(name, 'r') as file:
-        return [line for line in reader(file, delimiter=';')]
-
-
-# Data normalization "min max"
-def normalize_min_max(table: any, y_min: float, y_max: float):
-    table_len = len(table)
-    for row in range(0, table_len):
+# Function of normalization data
+def normalize_min_max(table, y_min, y_max):
+    for row in range(0, len(table)):
         min_value, max_value = min(table[row]), max(table[row])
-        table[row] = [
-            (y_max - y_min) * (table[row][col] - min_value) / (max_value - min_value) + y_min if min_value != max_value else max_value
-            for col in range(0, len(table[row]))
-        ]
+        table[row] = [(y_max - y_min) * (col - min_value) / (max_value - min_value) + y_min if min_value != max_value else max_value for col in table[row]]
     return table
 
 
-if __name__ == '__main__':
-    main(sys.argv[1:])
+# Function of restore data before normalization
+def denormalize(table, y_min, y_max, min_value, max_value):
+    for row in range(0, len(table)):
+        table[row] = [(col * min_value - col * max_value - min_value * y_max + max_value * y_min) / (y_min - y_max) for col in table[row]]
+    return table
+
+
+# Function of creating vector of Outputs
+def create_vector_target(table, vector_scale):
+    table_len = len(table)
+    table_scale = vector_scale
+    return array([[1 if col == table[row] else 0 for col in range(table_scale)] for row in range(table_len)])
+
+
+if __name__ == "__main__":
+    main(argv[1:])
     print("--> %s ms <--" % ((time() - start_time) * 1000))
