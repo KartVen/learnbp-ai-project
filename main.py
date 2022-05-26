@@ -20,9 +20,10 @@ def main(*args):
     layer_sizes = [9, int(args[0]), 6] if len(args) == 3 else [9, 30, 6]
     epochs = int(args[1]) if len(args) == 3 else 100000
     eta = args[2] if len(args) == 3 else 0.01
+    mini_batch_size = 15
 
     network_bp = Network(layer_sizes)
-    network_bp.train(train_data, epochs, eta, test_data=test_data)
+    network_bp.train(train_data, mini_batch_size, epochs, eta, test_data=test_data)
 
 
 def import_data(name, delimiter):
