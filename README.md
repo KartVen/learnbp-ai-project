@@ -9,6 +9,11 @@ Simple Neural Network with use backpropagation algorithm and dataset:
 git clone
 ```
 
+- Change working directory:
+```bash
+cd /path/to/repository
+```
+
 - Create/Set isolated **Python** environment:
 ```bash
 python -m venv venv
@@ -16,11 +21,6 @@ python -m venv venv
 ```bash
 Windows: ./venv/Scripts/activate
 Linux: ./venv/bin/activate
-```
-
-- Change working directory:
-```bash
-cd /path/to/repository
 ```
 
 - Installing required modules from **requirements** file:
