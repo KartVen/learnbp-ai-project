@@ -1,9 +1,10 @@
-from numpy import random, exp, dot, zeros, argmax
+from numpy import random, exp, dot, zeros, argmax, array, linalg
 
 
 class Network(object):
 
     def __init__(self, layer_sizes):
+        random.seed(1)
         self.layer_sizes = layer_sizes
         self.biases = [random.randn(y, 1) for y in layer_sizes[1:]]
         self.weights = [random.randn(y, x) for x, y in zip(layer_sizes[:-1], layer_sizes[1:])]
@@ -14,7 +15,8 @@ class Network(object):
             inputs = self.__sigmoid(dot(self.weights[i], inputs) + self.biases[i])
         return inputs
 
-    def train(self, training_data, mini_batch_size, epochs, eta, test_data=None):
+    def train(self, training_data, mini_batch_size, epochs, eta, error_target, test_data=None):
+        error_current = 0
         for i_epoch in range(epochs):
             random.shuffle(training_data)
 
@@ -61,24 +63,30 @@ class Network(object):
 
                 # Update weights
                 for i_layer in range(self.weights.__len__()):
-                    self.weights[i_layer] = self.weights[i_layer] - weightsGradient[i_layer] * (eta / len(mini_batch))
+                    self.weights[i_layer] = self.weights[i_layer] - weightsGradient[i_layer] * (eta / 2)
 
                 # Update biases
                 for i_layer in range(self.biases.__len__()):
-                    self.biases[i_layer] = self.biases[i_layer] - biasesGradient[i_layer] * (eta / len(mini_batch))
+                    self.biases[i_layer] = self.biases[i_layer] - biasesGradient[i_layer] * (eta / 2)
 
             if test_data:
+                error_current_old = error_current
+                error_current = 0.5 * sum([pow(linalg.norm(self.predict(x) - y), 2) for (x, y) in test_data])
                 predict_correctly = self.__check_efficiency(test_data)
-                print("Epoch %s | %s | %s / %s | %f %%" % (i_epoch, eta, predict_correctly[0], predict_correctly[1], (predict_correctly[0] / predict_correctly[1] * 100)))
+                predict_correctly_scale = round(predict_correctly[0] / predict_correctly[1] * 100, 2)
+                print("Epoch %s | %s | %s / %s | %s%% | N: %s %s | Error %s" % (
+                    i_epoch, eta, predict_correctly[0], predict_correctly[1], predict_correctly_scale, self.layer_sizes[1], self.layer_sizes[2], error_current))
+                if error_current < error_target or i_epoch == epochs - 1:
+                    return None
             else:
                 print("Epoch %s ..." % i_epoch)
 
+
     def __check_efficiency(self, test_data):
-        network_results = [(self.predict(x), y)
-                           for (x, y) in test_data]
+        network_results = [(self.predict(x), y) for (x, y) in test_data]
         predict_correctly = 0
         for i_record_test in range(network_results.__len__()):
-            if argmax(network_results[i_record_test][0].T) == test_data[i_record_test][1][0][0]:
+            if argmax(network_results[i_record_test][0].T) == argmax(array(test_data[i_record_test][1])).T:
                 predict_correctly += 1
         return predict_correctly, network_results.__len__()
 

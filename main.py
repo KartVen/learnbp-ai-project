@@ -1,8 +1,7 @@
 from csv import reader
-from numpy import array
+from numpy import array, arange
 from time import time
 from tabulate import tabulate
-from random import seed
 from sys import argv
 from sklearn.model_selection import train_test_split
 
@@ -13,17 +12,23 @@ start_time = time()
 
 def main(*args):
     args = array(args[0]).astype(float)
-    seed(1)
 
     train_data, test_data = import_and_form_data("BreastTissue.csv", ';')
 
-    layer_sizes = [9, int(args[0]), 6] if len(args) == 3 else [9, 30, 6]
-    epochs = int(args[1]) if len(args) == 3 else 100000
-    eta = args[2] if len(args) == 3 else 0.01
-    mini_batch_size = 15
+    layer_sizes = [9, 22, 16, 6]
+    epochs = int(args[0]) if len(args) == 3 else 2000
+    eta = args[1] if len(args) == 3 else 0.01
+    mini_batch_size = 21
+    error_goal = 0.25
 
-    network_bp = Network(layer_sizes)
-    network_bp.train(train_data, mini_batch_size, epochs, eta, test_data=test_data)
+    x_eta = eta
+    # for x_eta in arange(eta, 0.35, 0.02):
+    for s1 in range(1, 20, 1):
+        layer_sizes[1] = s1
+        for s2 in range(1, 20, 1):
+            layer_sizes[2] = s2
+            network_bp = Network(layer_sizes)
+            network_bp.train(train_data, mini_batch_size, epochs, x_eta, error_goal, test_data=test_data)
 
 
 def import_data(name, delimiter):
@@ -37,15 +42,15 @@ def import_and_form_data(name, delimiter):
 
     data = normalize_min_max(data.T, 0, 1).T
 
-    train_data, test_data = train_test_split(data, test_size=0.25, random_state=25)
+    train_data, test_data = train_test_split(data, test_size=0.20, random_state=25)
 
     P, T = train_data[:, 1:], train_data[:, :1]
     P_test, T_test = test_data[:, 1:], test_data[:, :1]
     T_vector = create_vector_target(T * 5, 6)
-    T_test *= 5
+    T_test_vector = create_vector_target(T * 5, 6)
 
     train_data = [(array([P[i]]).T, array([T_vector[i]]).T) for i in range(0, len(T))]
-    test_data = [(array([P_test[i]]).T, array([T_test[i]]).T) for i in range(0, len(T_test))]
+    test_data = [(array([P_test[i]]).T, array([T_test_vector[i]]).T) for i in range(0, len(T_test))]
 
     return train_data, test_data
 
