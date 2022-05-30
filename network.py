@@ -3,20 +3,22 @@ from numpy import random, exp, dot, zeros, argmax, array, linalg
 
 class Network(object):
 
+    # Constructor, takes list of layers with amount of neurons
     def __init__(self, layer_sizes):
         random.seed(1)
         self.layer_sizes = layer_sizes
+
+        # Generating random value for weight and biases
         self.biases = [random.randn(y, 1) for y in layer_sizes[1:]]
         self.weights = [random.randn(y, x) for x, y in zip(layer_sizes[:-1], layer_sizes[1:])]
 
     def predict(self, inputs):
-        # Predict outputs of the network
-        for i in range(self.biases.__len__()):
-            inputs = self.__sigmoid(dot(self.weights[i], inputs) + self.biases[i])
+        # Predict outputs of the network / feedforward
+        for b_value, w_value in zip(self.biases, self.weights):
+            inputs = self.__sigmoid(dot(w_value, inputs) + b_value)
         return inputs
 
     def train(self, training_data, mini_batch_size, epochs, eta, error_target, test_data=None):
-        error_current = 0
         for i_epoch in range(epochs):
             random.shuffle(training_data)
 
@@ -25,64 +27,71 @@ class Network(object):
             ]
 
             for mini_batch in mini_batches:
-                biasesGradient = [zeros(b.shape) for b in self.biases]
-                weightsGradient = [zeros(w.shape) for w in self.weights]
+                biases_gradient = [zeros(b.shape) for b in self.biases]
+                weights_gradient = [zeros(w.shape) for w in self.weights]
 
                 for i_record in range(mini_batch.__len__()):
                     # Counting the gradient for the cost function C_x.
-                    biasesGradientDelta = [zeros(b.shape) for b in self.biases]
-                    weightsGradientDelta = [zeros(w.shape) for w in self.weights]
+                    biases_gradient_delta = [zeros(b_value.shape) for b_value in self.biases]
+                    weights_gradient_delta = [zeros(w_value.shape) for w_value in self.weights]
 
                     # Feedforward Pass
                     # List all outputs of layers
                     outputs = [mini_batch[i_record][0]]
-                    # List all weightedSums of layers
-                    weightedSums = []
-                    for i_layer in range(self.biases.__len__()):
-                        weightedSum = dot(self.weights[i_layer], outputs[outputs.__len__() - 1])
-                        weightedSum = weightedSum + self.biases[i_layer]
-                        weightedSums.append(weightedSum)
-                        outputs.append(self.__sigmoid(weightedSum))
+                    # List all excitations of layers
+                    excitations = []
+
+                    # Calculate activations for neuron
+                    for w_value, b_value in zip(self.weights, self.biases):
+                        excitation = dot(w_value, outputs[outputs.__len__() - 1])
+                        excitation = excitation + b_value
+                        excitations.append(excitation)
+                        outputs.append(self.__sigmoid(excitation))
 
                     # Backward pass
-                    errorOutputLayer = self.__cost_derivative(outputs[outputs.__len__() - 1], mini_batch[i_record][1]) * self.__d_sigmoid(weightedSums[weightedSums.__len__() - 1])
-                    biasesGradientDelta[biasesGradientDelta.__len__() - 1] = errorOutputLayer
-                    weightsGradientDelta[weightsGradientDelta.__len__() - 1] = dot(errorOutputLayer, outputs[outputs.__len__() - 2].transpose())
+                    error_output_layer = self.__cost_derivative(outputs[outputs.__len__() - 1], mini_batch[i_record][1]) * self.__d_sigmoid(excitations[excitations.__len__() - 1])
+                    biases_gradient_delta[biases_gradient_delta.__len__() - 1] = error_output_layer
+                    weights_gradient_delta[weights_gradient_delta.__len__() - 1] = dot(error_output_layer, outputs[outputs.__len__() - 2].transpose())
 
+                    # Specifying the gradient increase for input and hidden layers
                     for i_layer in range(2, self.layer_sizes.__len__()):
-                        weightedSum = weightedSums[weightedSums.__len__() - i_layer]
-                        weightedSumDerivative = self.__d_sigmoid(weightedSum)
-                        errorOutputLayer = dot(self.weights[self.weights.__len__() - i_layer + 1].transpose(), errorOutputLayer) * weightedSumDerivative
-                        biasesGradientDelta[biasesGradientDelta.__len__() - i_layer] = errorOutputLayer
-                        weightsGradientDelta[weightsGradientDelta.__len__() - i_layer] = dot(errorOutputLayer, outputs[outputs.__len__() - i_layer - 1].transpose())
+                        excitation = excitations[excitations.__len__() - i_layer]
+                        excitation_derivative = self.__d_sigmoid(excitation)
+                        error_output_layer = dot(self.weights[self.weights.__len__() - i_layer + 1].transpose(), error_output_layer) * excitation_derivative
+                        biases_gradient_delta[biases_gradient_delta.__len__() - i_layer] = error_output_layer
+                        weights_gradient_delta[weights_gradient_delta.__len__() - i_layer] = dot(error_output_layer, outputs[outputs.__len__() - i_layer - 1].transpose())
 
-                    for i_layer in range(biasesGradient.__len__()):
-                        biasesGradient[i_layer] = biasesGradient[i_layer] + biasesGradientDelta[i_layer]
-                    for i_layer in range(weightsGradient.__len__()):
-                        weightsGradient[i_layer] = weightsGradient[i_layer] + weightsGradientDelta[i_layer]
+                    biases_gradient = [
+                        b_g_value + b_g_d_value for b_g_value, b_g_d_value in zip(biases_gradient, biases_gradient_delta)
+                    ]
+                    weights_gradient = [
+                        w_g_value + w_g_d_value for w_g_value, w_g_d_value in zip(weights_gradient, weights_gradient_delta)
+                    ]
 
                 # Update weights
-                for i_layer in range(self.weights.__len__()):
-                    self.weights[i_layer] = self.weights[i_layer] - weightsGradient[i_layer] * (eta / 2)
+                self.weights = [
+                    w_value - w_g_value * (eta / 2) for w_value, w_g_value in zip(self.weights, weights_gradient)
+                ]
 
                 # Update biases
-                for i_layer in range(self.biases.__len__()):
-                    self.biases[i_layer] = self.biases[i_layer] - biasesGradient[i_layer] * (eta / 2)
+                self.biases = [
+                    b_value - b_g_value * (eta / 2) for b_value, b_g_value in zip(self.biases, biases_gradient)
+                ]
 
             if test_data:
-                error_current_old = error_current
-                error_current = 0.5 * sum([pow(linalg.norm(self.predict(x) - y), 2) for (x, y) in test_data])
-                predict_correctly = self.__check_efficiency(test_data)
-                predict_correctly_scale = round(predict_correctly[0] / predict_correctly[1] * 100, 2)
-                print("Epoch %s | %s | %s / %s | %s%% | N: %s %s | Error %s" % (
-                    i_epoch, eta, predict_correctly[0], predict_correctly[1], predict_correctly_scale, self.layer_sizes[1], self.layer_sizes[2], error_current))
+                error_current = round(0.5 * sum([pow(linalg.norm(self.predict(x) - y), 2) for (x, y) in test_data]), 6)
+                predict_correctly = self.__check_accuracy(test_data)
+                predict_correctly_acc = round(predict_correctly[0] / predict_correctly[1] * 100, 2)
+                print("Epoch %s | %s | %s / %s | %s%% | N: %s %s | Error %s | mb: %s" % (
+                    i_epoch, eta, predict_correctly[0], predict_correctly[1], predict_correctly_acc, self.layer_sizes[1], self.layer_sizes[2], error_current, mini_batch_size))
+
                 if error_current < error_target or i_epoch == epochs - 1:
                     return None
+
             else:
                 print("Epoch %s ..." % i_epoch)
 
-
-    def __check_efficiency(self, test_data):
+    def __check_accuracy(self, test_data):
         network_results = [(self.predict(x), y) for (x, y) in test_data]
         predict_correctly = 0
         for i_record_test in range(network_results.__len__()):
@@ -91,7 +100,7 @@ class Network(object):
         return predict_correctly, network_results.__len__()
 
     def __cost_derivative(self, output_activations, y):
-        # Vector of partial derivatives dC_x/da for the output activations
+        # Return error between the neuron and the real result
         return output_activations - y
 
     def __sigmoid(self, value):

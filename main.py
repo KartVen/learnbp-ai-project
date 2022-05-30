@@ -1,13 +1,8 @@
 from csv import reader
-from numpy import array, arange
-from time import time
-from tabulate import tabulate
+from numpy import array
 from sys import argv
 from sklearn.model_selection import train_test_split
-
 from network import Network
-
-start_time = time()
 
 
 def main(*args):
@@ -15,27 +10,23 @@ def main(*args):
 
     train_data, test_data = import_and_form_data("BreastTissue.csv", ';')
 
-    layer_sizes = [9, 22, 16, 6]
-    epochs = int(args[0]) if len(args) == 3 else 2000
+    layer_sizes = [9, 7, 5, 6]
+    epochs = int(args[0]) if len(args) == 3 else 40000
     eta = args[1] if len(args) == 3 else 0.01
     mini_batch_size = 21
     error_goal = 0.25
 
-    x_eta = eta
-    # for x_eta in arange(eta, 0.35, 0.02):
-    for s1 in range(1, 20, 1):
-        layer_sizes[1] = s1
-        for s2 in range(1, 20, 1):
-            layer_sizes[2] = s2
-            network_bp = Network(layer_sizes)
-            network_bp.train(train_data, mini_batch_size, epochs, x_eta, error_goal, test_data=test_data)
+    network_bp = Network(layer_sizes)
+    network_bp.train(train_data, mini_batch_size, epochs, eta, error_goal, test_data=test_data)
 
 
+# Function of importing data from file
 def import_data(name, delimiter):
     with open(name, 'r') as file:
         return [line for line in reader(file, delimiter=delimiter)]
 
 
+# Function of import and auto formatting data
 def import_and_form_data(name, delimiter):
     data = array(import_data(name, delimiter))
     data = data.astype(float)
@@ -79,4 +70,3 @@ def create_vector_target(table, vector_scale):
 
 if __name__ == "__main__":
     main(argv[1:])
-    print("--> %s ms <--" % ((time() - start_time) * 1000))
